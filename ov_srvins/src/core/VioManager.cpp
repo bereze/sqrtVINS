@@ -232,6 +232,8 @@ void VioManager::track_image_and_update(
     message.masks.at(i) = mask_temp;
   }
 
+  // PRINT_DEBUG("Feed camera measurement at time %f\n", message.timestamp);
+
   // Perform our feature tracking!
   trackFEATS->feed_new_camera(message);
 
@@ -820,8 +822,8 @@ void VioManager::initialize_with_gt(Eigen::Matrix<double, 17, 1> imustate) {
   // Fix the global yaw and position gauge freedoms
   // TODO: Why does this break out simulation consistency metrics?
   std::vector<std::shared_ptr<ov_type::Type>> order = {state->imu};
-  MatX diagonal = 0.02 * MatX::Identity(state->imu->size(), state->imu->size());
-  diagonal.topRows<3>() = 0.017 * Vec3::Ones();    // q
+  VecX diagonal = 0.02 * VecX::Ones(state->imu->size());
+  diagonal.head<3>() = 0.017 * Vec3::Ones();       // q
   diagonal.middleRows<3>(3) = 0.05 * Vec3::Ones(); // p
   diagonal.middleRows<3>(6) = 0.01 * Vec3::Ones(); // v (static)
   StateHelper::set_initial_imu_square_root_covariance(state, diagonal);

@@ -79,7 +79,7 @@ public:
               bool is_iterative = false, bool require_HUT = true);
 
   /**
-   * @brief Update MSCKF features in the state, used in iterative update
+   * @brief Update MSCKF features in the state, used in iterative update, see eq(70)
    *
    * @param state State of the filter
    * @return  void    [return description]

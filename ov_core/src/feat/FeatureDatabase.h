@@ -197,6 +197,7 @@ public:
 
   std::map<double, size_t> tracking_stat;
 
+  /// Map of disparity information for each time0 and time1 pair (time0 -> time1 -> disparity)
   std::map<double, std::map<double, DataType>> map_disp;
 
 protected:

@@ -134,7 +134,8 @@ public:
                         const Eigen::Matrix<DataType, 15, 15> &Q_sqrt);
 
   /**
-   * @brief Perform SRF clone on the IMU state to create a clone IMU pose
+   * @brief Perform SRF clone on the IMU state to create a clone IMU pose.
+   *   The new clone will be added to the front of the state and covariance, the old clones will be placed at the end.
    * @param state Pointer to state
    * @param variable_to_clone The cloned pose
    */

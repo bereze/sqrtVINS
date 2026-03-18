@@ -12,20 +12,16 @@
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 3.0 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this program. If not, see
  * <https://www.gnu.org/licenses/>.
  */
-
-
-
-
 
 #ifndef OV_SRVINS_VIOMANAGEROPTIONS_H
 #define OV_SRVINS_VIOMANAGEROPTIONS_H
@@ -223,7 +219,7 @@ struct VioManagerOptions {
   int num_opencv_threads = 4;
 
   /// If our ROS image publisher should be async (if sim this should be no!)
-  bool use_multi_threading_pubs = true;
+  bool use_multi_threading_pubs = false;
 
   /// If our ROS subscriber callbacks should be async (if sim and serial then
   /// this should be no!)

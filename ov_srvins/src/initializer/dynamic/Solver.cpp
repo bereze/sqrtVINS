@@ -105,7 +105,7 @@ bool Solver::solve() {
   state_->resize_U_to_square();
 
   for (int it = 0; it < state_->init_options.init_dyn_mle_max_iter; it++) {
-    // Allows for retriangulation
+    // Allows for retriangulation, and compute jacobians and residuals.
     features_vec_ = features_vec_bak;
     state_->clear();
     state_->setup_matrix_buffer();
@@ -116,8 +116,8 @@ bool Solver::solve() {
       return false;
     }
 
-    StateHelper::iterative_update_llt(state_);
-    updater_msckf_->update_features(state_);
+    StateHelper::iterative_update_llt(state_); // 更新状态量
+    updater_msckf_->update_features(state_);   // 更新feature pos
     if (convergence_check() && (int)state_->features_MSCKF.size() >=
                                    state_->init_options.init_min_feat)
       break;

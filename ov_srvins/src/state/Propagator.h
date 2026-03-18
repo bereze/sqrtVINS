@@ -12,12 +12,12 @@
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 3.0 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this program. If not, see
  * <https://www.gnu.org/licenses/>.
@@ -55,7 +55,7 @@ class Propagator {
 
 public:
   /**
-   * @brief Default constructor
+   * @brief Default constructor，set imu noise.
    * @param noises imu noise characteristics (continuous time)
    * @param gravity_mag Global gravity magnitude of the system (normally 9.81)
    */
@@ -114,6 +114,7 @@ public:
   }
 
   // Point to the same imu data
+  // 让共享指针 “借用”imu_data_ 的地址，但不接管它的内存管理权（定义空的析构器）
   std::shared_ptr<std::vector<ov_core::ImuData>> get_imu_data() {
     return std::shared_ptr<std::vector<ov_core::ImuData>>(&imu_data_,
                                                           [](auto *) {});

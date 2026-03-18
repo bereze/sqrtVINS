@@ -12,19 +12,16 @@
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 3.0 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this program. If not, see
  * <https://www.gnu.org/licenses/>.
  */
-
-
-
 
 #include "utils/Helper.h"
 #include "feat/FeatureDatabase.h"
@@ -259,6 +256,8 @@ void efficient_QR(Eigen::Ref<MatX> Hx, Eigen::Ref<MatX> r,
   assert(Hx.rows() == r.rows());
   assert(Hx.rows() == Hf.rows());
 
+  // 构造置换矩阵P，使得Hx尽量接近上三角结构（让Hx的行按“第一个非0列索引”升序排列）
+  // 并将Hx、Hf和r按P进行行置换
   Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> P(Hx.rows());
   get_permutation_matrix(Hx, P);
   // Hx = (P.transpose() * Hx).eval();
@@ -267,6 +266,7 @@ void efficient_QR(Eigen::Ref<MatX> Hx, Eigen::Ref<MatX> r,
   Hf = (P.transpose() * Hf).eval();
   r = (P.transpose() * r).eval();
 
+  // Givens旋转逐列消元（把Hf变成上三角矩阵）,并同步变换Hx和r
   Eigen::JacobiRotation<DataType> temp_givens_rotation;
   for (int n = 0; n < Hf.cols(); ++n) {
     for (int m = (int)Hf.rows() - 1; m > n; m--) {
@@ -574,6 +574,11 @@ select_imu_readings(const std::vector<ov_core::ImuData> &imu_data, double time0,
                            "IMU-CAMERA are likely messed up!!!\n" RESET);
     return prop_data;
   }
+
+  PRINT_DEBUG(
+      "select_imu_readings(): IMU measurements to propagate: %.3f -> %.3f, "
+      "propagation time: %.3f -> %.3f\n",
+      imu_data[0].timestamp, imu_data.back().timestamp, time0, time1);
 
   // Loop through and find all the needed measurements to propagate with
   // Note we split measurements based on the given state time, and the update

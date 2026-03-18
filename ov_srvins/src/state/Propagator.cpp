@@ -461,8 +461,6 @@ void Propagator::propagate_and_clone(std::shared_ptr<State> state,
   //===================================================================================
   //===================================================================================
   //===================================================================================
-  if (state->timestamp != timestamp) {
-  }
   // Set the last time offset value if we have just started the system up
   if (!have_last_prop_time_offset_) {
     last_prop_time_offset_ = state->calib_dt_CAMtoIMU->value()(0);
@@ -496,7 +494,6 @@ void Propagator::propagate_and_clone(std::shared_ptr<State> state,
   // Loop through all IMU messages, and use them to move the state forward in
   // time This uses the zero'th order quat, and then constant acceleration
   // discrete
-  Timer t1, t2;
   if (prop_data.size() > 1) {
     for (size_t i = 0; i < prop_data.size() - 1; i++) {
 

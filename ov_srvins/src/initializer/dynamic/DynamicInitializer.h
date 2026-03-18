@@ -98,6 +98,16 @@ private:
                  &feature_database,
              std::set<double> &keyframe_timestamps);
 
+  /**
+   * @brief Preintegrate IMU data for each camera frame
+   *    
+   * @param imu_data IMU data
+   * @param keyframe_timestamps Keyframe timestamps
+   * @param gyroscope_bias Gyroscope bias
+   * @param accelerometer_bias Accelerometer bias
+   * @param map_camera_cpi_I0toIi Output map of camera CPI preintegrations 
+   * @return bool True if successful, false otherwise
+   */
   bool preintegrate(
       const std::vector<ov_core::ImuData> &imu_data,
       const std::set<double> &keyframe_timestamps, const Vec3 &gyroscope_bias,
