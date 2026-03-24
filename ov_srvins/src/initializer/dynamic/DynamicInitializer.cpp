@@ -136,8 +136,8 @@ bool DynamicInitializer::initialize(std::shared_ptr<State> &state) {
       select_imu_readings(imu_data, time0_in_imu, time1_in_imu);
   assert(readings.size() > 2);
   for (int k = 0; k < (int)readings.size() - 1; k++) {
-    auto imu0 = readings.at(k);
-    auto imu1 = readings.at(k + 1);
+    const auto& imu0 = readings.at(k);
+    const auto& imu1 = readings.at(k + 1);
     double dt = imu1.timestamp - imu0.timestamp;
     Vec3 wm = 0.5 * (imu0.wm + imu1.wm) - gyroscope_bias;
     Vec3 am = 0.5 * (imu0.am + imu1.am) - accelerometer_bias;
@@ -163,6 +163,7 @@ bool DynamicInitializer::initialize(std::shared_ptr<State> &state) {
   std::map<double, std::shared_ptr<ov_core::CpiV1>> map_camera_cpi_I0toIi;
   if (!preintegrate(imu_data, map_camera_times, gyroscope_bias,
                     accelerometer_bias, map_camera_cpi_I0toIi)) {
+    PRINT_ERROR(RED "[init-d]: failed to preintegrate IMU data!!\n" RESET);
     return false;
   }
 
@@ -207,7 +208,7 @@ bool DynamicInitializer::initialize(std::shared_ptr<State> &state) {
   // ======================================================
   // Find translation directions
   // ======================================================
-  std::map<size_t, std::map<double, Mat3>> map_R_CktoI0;
+  std::map<size_t, std::map<double, Mat3>> map_R_CktoI0;  // [cam_id, kf_time, R_CktoI0]
   // Precompute R_CktoI0
   for (int i = 0; i < params_.num_cameras; i++) {
     Vec4 q_ItoC = params_.camera_extrinsics.at(i).block(0, 0, 4, 1);
@@ -323,9 +324,10 @@ bool DynamicInitializer::initialize(std::shared_ptr<State> &state) {
   Vec3 v_I0inI0 = x_refined.topRows<3>();
   Vec3 gravity_inI0 = x_refined.bottomRows<3>();
 
-  PRINT_INFO("[init-d]: gravity in I0 was %.3f,%.3f,%.3f and |g| = %.4f\n",
+  PRINT_INFO("[init-d]: vel_init = (%.3f, %.3f, %.3f), |v| = %.3f, gravity in I0 was %.3f,%.3f,%.3f and |g| = %.4f, time = %.3f\n",
+             v_I0inI0(0), v_I0inI0(1), v_I0inI0(2), v_I0inI0.norm(),
              gravity_inI0(0), gravity_inI0(1), gravity_inI0(2),
-             gravity_inI0.norm());
+             gravity_inI0.norm(), *map_camera_times.begin());
 
   // ======================================================
   // Iterative refinement with iterative SRF
@@ -362,7 +364,7 @@ bool DynamicInitializer::initialize(std::shared_ptr<State> &state) {
   if (!srf_solver.solve()) {
     state = std::make_shared<State>(state->options,
                                     state->init_options); // Reset the state
-    StateHelper::initialize_state(state, VecX::Zero(15), -1);
+    StateHelper::initialize_state(state, VecX::Zero(16), -1);
     return false;
   }
 
@@ -612,7 +614,7 @@ bool DynamicInitializer::find_eigen_vectors(
   int num_meas = 0;
   const auto &bearings_C0_in_I0 = bearings_in_I0.at(time0).at(cam_id0);
   const auto &bearings_C1_in_I0 = bearings_in_I0.at(time1).at(cam_id1);
-  MatX n_plane = MatX::Zero(3, bearings_in_I0.at(time0).at(cam_id0).size());
+  MatX n_plane = MatX::Zero(3, bearings_C0_in_I0.size());
   Mat3 H_plane = Mat3::Zero();
 
   // Get inlier ids too
@@ -742,7 +744,7 @@ void DynamicInitializer::build_linear_system(
     R_I0toIk0 = map_camera_cpi_I0toIi.at(time0)->R_k2tau;
     R_I0toIk1 = map_camera_cpi_I0toIi.at(time1)->R_k2tau;
     // const auto &eig_vec = data.second.rightCols(2);
-    auto eig_vec = data.second.rightCols(2); // The one with smallest eigenvalue
+    auto eig_vec = data.second.rightCols(2); // The one without smallest eigenvalue
     A.block<kMeasurementSize, kVelocitySize>(row_count, kVelocityId) =
         -(t1 - t0) * eig_vec.transpose();
     A.block<kMeasurementSize, kGravitySize>(row_count, kGravityId) =

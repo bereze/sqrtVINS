@@ -108,6 +108,8 @@ public:
    * @param timestamp Timestamps that our measurements must occur after
    */
   void clean_older_measurements(double timestamp);
+
+  float calc_parallax(const std::vector<Mat3> &cam_orients_history);
 };
 
 } // namespace ov_core

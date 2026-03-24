@@ -281,7 +281,7 @@ void UpdaterMSCKF::update(std::shared_ptr<State> state,
     H_x2 = H_x.bottomRows(H_x.rows() - feat_size);  // (2*M - 3) x N_state
     res2 = res.tail(res.rows() - feat_size);
 
-    if (require_HUT) {
+    if (require_HUT) { // see eq(44-45)
       MatX U_dense, U_tri;
       StateHelper::get_marginal_U_block(state, Hx_order, U_dense, U_tri);
       HUT = MatX::Zero(H_x2.rows(), U_dense.rows() + U_tri.rows());
@@ -295,7 +295,7 @@ void UpdaterMSCKF::update(std::shared_ptr<State> state,
       if (!is_iterative) {
         MatX S = HUT * HUT.transpose();
         S.diagonal() += options_.sigma_pix_sq * VecX::Ones(S.rows());
-        DataType chi2 = res2.dot(S.llt().solve(res2));
+        DataType chi2 = res2.dot(S.llt().solve(res2)); // Mahalanobis distance in eq(44)
 
         // Get our threshold (we precompute up to 500 but handle the case that
         // it is more)
@@ -318,7 +318,7 @@ void UpdaterMSCKF::update(std::shared_ptr<State> state,
         }
       }
 
-      VecX RHTr = VecX::Zero(state->get_state_size());
+      VecX RHTr = VecX::Zero(state->get_state_size()); // see eq(9)
       VecX RHTr_small = H_x2.transpose() * res2 * options_.sigma_pix_sq_inv;
       int local_id = 0;
       for (const auto &var : Hx_order) {

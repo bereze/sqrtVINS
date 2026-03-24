@@ -206,12 +206,13 @@ void StateHelper::propagate(std::shared_ptr<State> state,
   MatX U_new = MatX::Zero(rows + 15, state_size);
 
   // Copy first block if needed
+  assert(state->imu->id() == 0);
   if (state->imu->id() != 0)
     U_new.block(15, 0, state->imu->id(), state->imu->id())
         .triangularView<Eigen::Upper>() =
         state->U_.block(0, 0, state->imu->id(), state->imu->id());
 
-  // New IMU
+  // New IMU  U * Phi^T
   U_new.block(15, state->imu->id(), remaining_id, 15).noalias() =
       state->U_.block(0, state->imu->id(), remaining_id, 15) * Phi.transpose();
 
@@ -222,7 +223,7 @@ void StateHelper::propagate(std::shared_ptr<State> state,
   // Noise Block
   U_new.block<15, 15>(0, state->imu->id()) = Q_sqrt;
 
-  // Do first QR in here if not reaching the maximal clone size
+  // Do first QR in here if not reaching the maximal clone size (skip QR) see eq(7)
   if ((int)state->clones_IMU.size() < state->options.max_clone_size + 1) {
     efficient_QR(U_new);
     U_new.conservativeResizeLike(MatX::Zero(state_size, state_size));
@@ -235,10 +236,10 @@ void StateHelper::propagate(std::shared_ptr<State> state,
 std::shared_ptr<Type>
 StateHelper::clone(std::shared_ptr<State> state,
                    std::shared_ptr<Type> variable_to_clone) {
-  assert(state->U_.rows() == state->U_.cols());
+  // assert(state->U_.rows() == state->U_.cols());
 
   // Get total size of new cloned variables, and the old covariance size
-  int new_size = variable_to_clone->size();
+  int new_size = variable_to_clone->size(); // = 6
   int state_size = (int)state->U_.cols();
   int rows = (int)state->U_.rows();
 
@@ -247,11 +248,11 @@ StateHelper::clone(std::shared_ptr<State> state,
   // Resize both our covariance to the new size
   state->U_.conservativeResizeLike(MatX::Zero(rows, state_size + new_size));
 
-  // Copy the remaining blocks
+  // Copy the remaining blocks 之前的clones列都往后移
   state->U_.block(0, new_loc + new_size, rows, state_size - new_loc) =
       state->U_.block(0, new_loc, rows, state_size - new_loc).eval();
 
-  // Copy the clone blocks
+  // Copy the clone blocks 新的clone列
   state->U_.block(0, new_loc, rows, new_size) =
       state->U_.block(0, state->imu->id(), rows, new_size);
 
@@ -279,13 +280,13 @@ void StateHelper::update_llt(std::shared_ptr<State> state, bool is_iterative) {
 
   // Calculate measurement size
   int state_size = state->U_.cols();
-  int offset = state->x_init_.size() * 3; // offset value to reduce computation
+  int offset = state->x_init_.size() * 3; // offset value to reduce computation. feature dimension
 
   //==========================================================
   //==========================================================
   // Get the location in small jacobian for each measuring variable
   VecX HT_R_inv_res = VecX::Zero(state_size, 1);
-  assert(state_size - offset == state->HT_R_inv_res_.get().cols());
+  assert(state_size - offset == state->HT_R_inv_res_.get().rows());
   HT_R_inv_res.topRows(state_size - offset) = state->HT_R_inv_res_.get();
   auto R_sqrt_inv_H_UT = state->R_sqrt_inv_H_UT_.get();
 
@@ -382,6 +383,7 @@ void StateHelper::iterative_update_llt(std::shared_ptr<State> state) {
 
   r_big_new += H_big_new.triangularView<Eigen::Lower>() * state->xk_minus_x0_;
 
+  // Compute S, which is C in eq(11)
   MatX UH_T = MatX::Zero(state_size, state_size);
   MatX S = MatX::Zero(state_size, state_size);
   triangular_matrix_multiplier_UU(state->U_, H_big_new.transpose(), UH_T);

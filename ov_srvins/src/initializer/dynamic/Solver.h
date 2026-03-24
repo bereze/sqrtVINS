@@ -45,9 +45,11 @@ struct SolverMonitor {
   DataType res_ratio = 999;
 
   void print() {
-    std::cout << std::setprecision(3) << "res_prev: " << res_prev
-              << ", res_curr: " << res_curr << ", dx_ratio: " << dx_ratio
-              << ", res_ratio: " << res_ratio << std::endl;
+    PRINT_INFO("res_prev: %f, res_curr: %f, dx_ratio: %f, res_ratio: %f\n", 
+      res_prev, res_curr, dx_ratio, res_ratio);
+    // std::cout << std::setprecision(3) << "res_prev: " << res_prev
+    //           << ", res_curr: " << res_curr << ", dx_ratio: " << dx_ratio
+    //           << ", res_ratio: " << res_ratio << std::endl;
   }
 };
 

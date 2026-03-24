@@ -91,6 +91,13 @@ public:
    * @param state Pointer to state
    * @param small_variables Vector of variables whose marginal covariance is
    * desired
+   *
+   *  ***|**| -> U_dense
+   *   **|**|
+   *    *|**|   
+   *     |**| -> U_tri
+   *     | *|
+   *
    * @param U_dense The top dense block
    * @param U_tri The bottom upper-triangular block
    */

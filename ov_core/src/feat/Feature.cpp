@@ -122,3 +122,25 @@ void Feature::clean_older_measurements(double timestamp) {
     }
   }
 }
+
+float Feature::calc_parallax(const std::vector<Mat3> &cam_orients_history) {
+  float parallax = -1.f;
+  auto orient = [](const Vec2& pt, Vec3& e) {
+    float phi = std::atan2(pt[1], std::sqrt(std::pow(pt[0], 2) + 1));
+    float psi = std::atan2(pt[0], 1);
+    e << std::cos(phi) * std::sin(psi), std::sin(phi), std::cos(phi) * std::cos(psi);
+  };
+  assert(!timestamps.empty());
+  for (const auto& campair : timestamps) {
+    assert(campair.second.size() >= 2);
+    int idk = cam_orients_history.size() - 1;
+    int id0 = std::max((int)(cam_orients_history.size() - uvs_norm[campair.first].size()), 0); // some feat has meas more than max clones while not update yet
+    Vec3 e0, ek;
+    orient(uvs_norm[campair.first].front(), e0);
+    orient(uvs_norm[campair.first].back(), ek);
+    Mat3 mRk0 = cam_orients_history[idk].transpose() * cam_orients_history[id0];
+    float theta = std::fabs(std::acos(ek.dot(mRk0 * e0)));
+    parallax = std::max(parallax, (float)(40.f * std::sin(theta) > 1 ? theta * 180 / M_PI : 0));
+  }
+  return parallax;
+}

@@ -78,7 +78,7 @@ void UpdaterHelper::get_feature_jacobian_representation(
     // Construct the Jacobian
     H_f << -(1.0 / rho) * sin_th * sin_phi, (1.0 / rho) * cos_th * cos_phi, -(1.0 / (rho * rho)) * cos_th * sin_phi,
            (1.0 / rho) * cos_th * sin_phi, (1.0 / rho) * sin_th * cos_phi, -(1.0 / (rho * rho)) * sin_th * sin_phi,
-        0.0, -(1.0 / rho) * sin_phi, -(1.0 / (rho * rho)) * cos_phi;
+           0.0, -(1.0 / rho) * sin_phi, -(1.0 / (rho * rho)) * cos_phi;
     return;
   }
 
@@ -202,7 +202,7 @@ bool UpdaterHelper::get_feature_jacobian_full(
     MatX &H_x, VecX &res, std::vector<std::shared_ptr<Type>> &x_order) {
   // Compute the size of the states involved with this feature
   std::map<std::shared_ptr<Type>, size_t> map_hx;
-  int total_hx = 0;
+  int total_hx = 0;  // total size of the states involved with this feature
   int total_meas = 0;
 
   // In iterative mode, this order will be kept
@@ -298,9 +298,9 @@ bool UpdaterHelper::get_feature_jacobian_full(
     // Directly use the order from the state
     x_order = feat_msckf->second->x_order_msckf;
     // Get the total size of the states involved with this feature
-    for (auto const &pair : x_order) {
-      map_hx.insert({pair, total_hx});
-      total_hx += pair->size();
+    for (auto const &var : x_order) {
+      map_hx.insert({var, total_hx});
+      total_hx += var->size();
     }
     // Get the total number of measurements
     for (auto const &pair : feature.timestamps) {
@@ -446,7 +446,8 @@ bool UpdaterHelper::get_feature_jacobian_full(
 
       // Derivative of p_FinCi in respect to camera clone state
       static Eigen::Matrix<DataType, 3, 6> dpfc_dclone;
-      dpfc_dclone.leftCols<3>().noalias() = skew_x(p_FinCi - p_IinC) * R_ItoC;
+      dpfc_dclone.leftCols<3>().noalias() = skew_x(p_FinCi - p_IinC) * R_ItoC; // TODO: should be below
+      // dpfc_dclone.leftCols<3>().noalias() = R_ItoC * skew_x(p_FinCi - p_IinC);
       dpfc_dclone.rightCols<3>().noalias() = -dpfc_dpfg;
 
       //=========================================================================
