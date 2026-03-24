@@ -139,11 +139,8 @@ bool FeatureInitializer::single_triangulation(
 
   // Check A and p_f
   Eigen::JacobiSVD<Mat3> svd(A);
-  MatX singularValues;
-  singularValues.resize(svd.singularValues().rows(), 1);
-  singularValues = svd.singularValues();
-  DataType condA =
-      singularValues(0, 0) / singularValues(singularValues.rows() - 1, 0);
+  Vec3 singularValues = svd.singularValues();
+  DataType condA = singularValues(0) / singularValues(2);
 
   // std::stringstream ss;
   // ss << feat->featid << " - cond " << std::abs(condA) << " - z " << p_f(2, 0)
@@ -480,8 +477,8 @@ bool FeatureInitializer::single_gaussnewton(
   feat->p_FinA(2) = 1 / rho;
 
   // Get tangent plane to x_hat
-  Eigen::HouseholderQR<MatX> qr(feat->p_FinA);
-  MatX Q = qr.householderQ();
+  // Eigen::HouseholderQR<Mat3> qr(feat->p_FinA.matrix());
+  Mat3 Q = feat->p_FinA.matrix().householderQr().householderQ();
 
   // Max baseline we have between poses
   DataType base_line_max = 0.0;
@@ -504,7 +501,8 @@ bool FeatureInitializer::single_gaussnewton(
       // Convert current position relative to anchor
       Vec3 p_CiinA = R_GtoA * (p_CiinG - p_AinG);
       // Dot product camera pose and nullspace
-      DataType base_line = ((Q.block(0, 1, 3, 2)).transpose() * p_CiinA).norm();
+      Vec2 uv = (Q.block(0, 1, 3, 2)).transpose() * p_CiinA;
+      DataType base_line = uv.norm();
       if (base_line > base_line_max)
         base_line_max = base_line;
     }

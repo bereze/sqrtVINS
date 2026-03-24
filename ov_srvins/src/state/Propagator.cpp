@@ -12,20 +12,16 @@
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 3.0 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this program. If not, see
  * <https://www.gnu.org/licenses/>.
  */
-
-
-
-
 
 #include "Propagator.h"
 
@@ -199,7 +195,7 @@ void Propagator::predict_and_compute(std::shared_ptr<State> state,
 
   // Time elapsed over interval
   double dt = data_plus.timestamp - data_minus.timestamp;
-  // assert(data_plus.timestamp>data_minus.timestamp);
+  assert(data_plus.timestamp > data_minus.timestamp);
 
   // Corrected imu measurements
   Eigen::Matrix<DataType, 3, 1> w_hat = data_minus.wm - state->imu->bias_g();
@@ -489,7 +485,6 @@ void Propagator::propagate_and_clone(std::shared_ptr<State> state,
   Eigen::Matrix<DataType, 15, 15> Qd_summed =
       Eigen::Matrix<DataType, 15, 15>::Zero();
   double dt_summed = 0;
-  MatX R = MatX::Zero(27, 15);
 
   // Loop through all IMU messages, and use them to move the state forward in
   // time This uses the zero'th order quat, and then constant acceleration

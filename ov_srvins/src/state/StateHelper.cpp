@@ -837,11 +837,10 @@ void StateHelper::propagate_slam_anchor_feature(
   MatX U_feat_new = MatX::Zero(state->U_.rows(), kFeatSize);
   const int start_row = 15;
   int offset = 0;
-  const auto clone_A_new =
-      state->clones_IMU.at(landmark->anchor_clone_timestamp);
+  const auto clone_A_new = state->clones_IMU.at(landmark->anchor_clone_timestamp);
   for (auto var : phi_order_OLD) {
     // Generally speaking we have 3 different types of state in here x_calib,
-    // x_new_clone, x_old_clone, x_f x_new_clone needs extra care to deal with
+    // x_new_clone, x_old_clone, x_f. x_new_clone needs extra care to deal with
     // no-zero Q block state id larger than the new clone need to -6 to get id
     // before clone
     if (var->id() == clone_A_new->id()) {

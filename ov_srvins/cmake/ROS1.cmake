@@ -84,6 +84,7 @@ endif ()
 list(APPEND LIBRARY_SOURCES
         src/dummy.cpp
         src/sim/Simulator.cpp
+        src/sim/SimulatorInit.cpp
         src/state/State.cpp
         src/state/StateHelper.cpp
         src/state/Propagator.cpp
@@ -170,6 +171,14 @@ install(TARGETS test_sim_repeat
         LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
         RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
         )
+
+add_executable(test_dynamic_init src/test_dynamic_init.cpp)
+target_link_libraries(test_dynamic_init ov_srvins_lib ${thirdparty_libraries})
+install(TARGETS test_dynamic_init
+        ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+        LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+        RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 
 # #################################################
 # Launch files!

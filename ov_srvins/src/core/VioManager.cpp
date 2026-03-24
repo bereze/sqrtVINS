@@ -538,8 +538,7 @@ void VioManager::do_feature_propagate_update(
   // first set of slam points)
   if (state->options.max_slam_features > 0 &&
       message.timestamp - startup_time >= params.dt_slam_delay &&
-      (int)state->features_SLAM.size() <
-          state->options.max_slam_features + curr_aruco_tags) {
+      (int)state->features_SLAM.size() < state->options.max_slam_features + curr_aruco_tags) {
     // Get the total amount to add, then the max amount that we can add given
     // our marginalize feature array
     int amount_to_add = (state->options.max_slam_features + curr_aruco_tags) -
@@ -565,8 +564,7 @@ void VioManager::do_feature_propagate_update(
   // FEJ, these types of slam features *degrade* the estimator performance....
   // NOTE: we will also marginalize SLAM features if they have failed their
   // update a couple times in a row
-  for (std::pair<const size_t, std::shared_ptr<Landmark>> &landmark :
-       state->features_SLAM) {
+  for (std::pair<const size_t, std::shared_ptr<Landmark>> &landmark : state->features_SLAM) {
     if (trackARUCO != nullptr) {
       std::shared_ptr<Feature> feat1 =
           trackARUCO->get_feature_database()->get_feature(

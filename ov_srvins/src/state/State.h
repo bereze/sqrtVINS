@@ -12,20 +12,16 @@
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 3.0 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this program. If not, see
  * <https://www.gnu.org/licenses/>.
  */
-
-
-
-
 
 #ifndef OV_SRVINS_STATE_H
 #define OV_SRVINS_STATE_H
@@ -119,7 +115,7 @@ public:
   void resize_U_to_square();
 
   /**
-   * @brief Calculate the clone poses to avoid recalculation
+   * @brief Calculate the clone camera poses to avoid recalculation
    * @param fej If true, will calculate the fej clone poses
    */
   void calculate_clone_poses(bool fej = false);
@@ -199,6 +195,13 @@ public:
    */
   void add_marginal_state(std::shared_ptr<ov_type::Type> var);
 
+  MatX covariance() const {
+    MatX P = U_.transpose() * U_;
+    return P.block(0, 0, imu->size(), imu->size());
+  }
+
+  MatX U() const { return U_; }
+
   /// Current timestamp (should be the last update time!)
   double timestamp = -1;
 
@@ -250,22 +253,22 @@ private:
   // will actually correctly add it to the covariance
   friend class StateHelper;
 
-  /// Starting ID for clones
+  /// Starting ID for clones (状态向量里的索引)
   const int kCloneStartId;
 
-  /// Vector of variables
+  /// Vector of state variables
   std::vector<std::shared_ptr<ov_type::Type>> variables_;
 
   /// Sqaure root of the Covariance
   MatX U_;
 
   /// H_order update
-  EigenMatrixBuffer H_update_;
-  EigenMatrixBuffer res_update_;
+  EigenMatrixBuffer H_update_;    // SRF更新雅可比
+  EigenMatrixBuffer res_update_;  // SRF更新残差
 
   // Store the pre-calculated values
-  EigenMatrixBuffer R_sqrt_inv_H_UT_;
-  EigenMatrixBuffer HT_R_inv_res_;
+  EigenMatrixBuffer R_sqrt_inv_H_UT_;  // 用于计算LLT更新的协方差和残差，详见eq(9-10), N_meas x N_state
+  EigenMatrixBuffer HT_R_inv_res_;     // 用于计算LLT更新的残差, N_state x 1
 
   // Store the initialization values
   std::vector<std::shared_ptr<ov_type::Type>> x_init_;

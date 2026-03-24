@@ -691,7 +691,7 @@ void UpdaterSLAM::perform_anchor_change(std::shared_ptr<State> state,
 
   // Inverse of our new representation
   // pf_new_error =
-  // Hfnew^{-1}*(Hfold*pf_olderror+Hxold*x_olderror-Hxnew*x_newerror)
+  // Hfnew^{-1}*(Hfold*pf_olderror+Hxold*x_olderror-Hxnew*x_newerror)，see eq(47)
   MatX H_f_new_inv;
   H_f_new_inv = H_f_new.colPivHouseholderQr().solve(
       Eigen::Matrix<DataType, 3, 3>::Identity());

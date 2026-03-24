@@ -130,7 +130,7 @@ struct VioManagerOptions {
 
   /// Delay, in seconds, that we should wait from init before we start
   /// estimating SLAM features
-  DataType dt_slam_delay = 2.0;
+  DataType dt_slam_delay = 1.0;
 
   /// If we should try to use zero velocity update
   bool try_zupt = false;

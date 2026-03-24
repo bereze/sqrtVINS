@@ -69,8 +69,6 @@ UpdaterMSCKF::UpdaterMSCKF(
 void UpdaterMSCKF::update(std::shared_ptr<State> state,
                           std::vector<std::shared_ptr<Feature>> &feature_vec,
                           bool is_iterative, bool require_HUT) {
-  Timer t, t1, t2, t3, t4;
-
   // Return if no features
   if (feature_vec.empty())
     return;
@@ -91,7 +89,6 @@ void UpdaterMSCKF::update(std::shared_ptr<State> state,
   // times
   auto it0 = feature_vec.begin();
   while (it0 != feature_vec.end()) {
-
     // Clean the feature
     int ct_meas = 0;
     if (do_clean) {
@@ -212,9 +209,9 @@ void UpdaterMSCKF::update(std::shared_ptr<State> state,
 
     // Our return values (feature jacobian, state jacobian, residual, and order
     // of state jacobian)
-    MatX H_f;
-    MatX H_x;
-    VecX res;
+    MatX H_f; // 2*M x 3
+    MatX H_x; // 2*M x N_state
+    VecX res; // 2*M
     std::vector<std::shared_ptr<Type>> Hx_order;
 
     // Get the Jacobian for this feature
@@ -267,7 +264,7 @@ void UpdaterMSCKF::update(std::shared_ptr<State> state,
       }
     }
 
-    // Nullspace project
+    // Nullspace project, see eq(69)
     MatX H_x1, H_x2, H_f1, HUT;
     VecX res1, res2;
     const int feat_size = H_f.cols();
@@ -276,12 +273,12 @@ void UpdaterMSCKF::update(std::shared_ptr<State> state,
     efficient_QR(H_x, res, H_f);
     reverse_mat(H_x);
     if (is_iterative) {
-      H_x1 = H_x.topRows(feat_size);
-      H_f1 = H_f.topRows(feat_size);
+      H_x1 = H_x.topRows(feat_size);  // 3 x N_state
+      H_f1 = H_f.topRows(feat_size);  // 3 x 3
       res1 = res.head(feat_size);
     }
 
-    H_x2 = H_x.bottomRows(H_x.rows() - feat_size);
+    H_x2 = H_x.bottomRows(H_x.rows() - feat_size);  // (2*M - 3) x N_state
     res2 = res.tail(res.rows() - feat_size);
 
     if (require_HUT) {
@@ -401,8 +398,8 @@ void UpdaterMSCKF::update_features(std::shared_ptr<State> state) {
     }
     feat_dx -= feat_msckf.second->Hx_msckf * dx_small;
 
-    feat_msckf.second->Hf_msckf.triangularView<Eigen::Upper>().solveInPlace(
-        feat_dx);
+    // feat_dx = Hf^{-1} * feat_dx, where Hf is upper triangular, see eq(70)
+    feat_msckf.second->Hf_msckf.triangularView<Eigen::Upper>().solveInPlace(feat_dx);  
     feat_msckf.second->update(feat_dx);
     feat_msckf.second->feat_dx = feat_dx;
   }

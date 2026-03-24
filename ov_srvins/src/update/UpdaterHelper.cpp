@@ -63,7 +63,7 @@ void UpdaterHelper::get_feature_jacobian_representation(
     DataType g_phi = std::acos(g_rho * p_FinG(2));
     // DataType g_theta = std::asin(g_rho*p_FinG(1)/std::sin(g_phi));
     DataType g_theta = std::atan2(p_FinG(1), p_FinG(0));
-    Vec3 p_invFinG({g_theta, g_phi, g_rho});
+    // Vec3 p_invFinG({g_theta, g_phi, g_rho});
     // p_invFinG(0) = g_theta;
     // p_invFinG(1) = g_phi;
     // p_invFinG(2) = g_rho;
@@ -76,9 +76,8 @@ void UpdaterHelper::get_feature_jacobian_representation(
     DataType rho = g_rho;
 
     // Construct the Jacobian
-    H_f << -(1.0 / rho) * sin_th * sin_phi, (1.0 / rho) * cos_th * cos_phi,
-        -(1.0 / (rho * rho)) * cos_th * sin_phi, (1.0 / rho) * cos_th * sin_phi,
-        (1.0 / rho) * sin_th * cos_phi, -(1.0 / (rho * rho)) * sin_th * sin_phi,
+    H_f << -(1.0 / rho) * sin_th * sin_phi, (1.0 / rho) * cos_th * cos_phi, -(1.0 / (rho * rho)) * cos_th * sin_phi,
+           (1.0 / rho) * cos_th * sin_phi, (1.0 / rho) * sin_th * cos_phi, -(1.0 / (rho * rho)) * sin_th * sin_phi,
         0.0, -(1.0 / rho) * sin_phi, -(1.0 / (rho * rho)) * cos_phi;
     return;
   }
@@ -150,7 +149,7 @@ void UpdaterHelper::get_feature_jacobian_representation(
     DataType a_rho = 1 / p_FinA.norm();
     DataType a_phi = std::acos(a_rho * p_FinA(2));
     DataType a_theta = std::atan2(p_FinA(1), p_FinA(0));
-    Vec3 p_invFinA({a_theta, a_phi, a_rho});
+    // Vec3 p_invFinA({a_theta, a_phi, a_rho});
 
     // Using anchored inverse depth
     DataType sin_th = std::sin(a_theta);
