@@ -12,20 +12,16 @@
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 3.0 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this program. If not, see
  * <https://www.gnu.org/licenses/>.
  */
-
-
-
-
 
 #ifndef OV_CORE_CAM_EQUI_H
 #define OV_CORE_CAM_EQUI_H
@@ -124,13 +120,45 @@ public:
    * @return 2d vector of normalized coordinates
    */
   Vec2 undistort(const Vec2 &uv_dist) override {
-
+#if defined(USE_OPENCV_IMPL)
     cv::Mat mat(1, 2, CV_32F);
     mat.at<float>(0, 0) = uv_dist(0);
     mat.at<float>(0, 1) = uv_dist(1);
     mat = mat.reshape(2); // Nx1, 2-channel
     cv::fisheye::undistortPoints(mat, mat, camera_k_OPENCV_, camera_d_OPENCV_);
     return Vec2(mat.at<float>(0, 0), mat.at<float>(0, 1));
+#else
+    const DataType &fx = camera_values_(0);
+    const DataType &fy = camera_values_(1);
+    const DataType &cx = camera_values_(2);
+    const DataType &cy = camera_values_(3);
+    const DataType &k1 = camera_values_(4);
+    const DataType &k2 = camera_values_(5);
+    const DataType &k3 = camera_values_(6);
+    const DataType &k4 = camera_values_(7);
+    Vec2 pt_distorted_normalized;
+    pt_distorted_normalized << (uv_dist.x() - cx) / fx, (uv_dist.y() - cy) / fy;
+
+    DataType rd = pt_distorted_normalized.norm();
+    DataType theta = rd;
+    for (int i = 0; i < 10; ++i) {
+      DataType theta2 = theta * theta;
+      DataType theta4 = theta2 * theta2;
+      DataType theta6 = theta4 * theta2;
+      DataType theta8 = theta4 * theta4;
+      DataType theta_d = theta * (1 + k1 * theta2 + k2 * theta4 + k3 * theta6 + k4 * theta8);
+      DataType error = theta_d - rd;
+      DataType J = 1.0 + 3.0 * k1 * theta2 + 5.0 * k2 * theta4 + 7.0 * k3 * theta6 + 9.0 * k4 * theta8;
+      theta -= error / J;
+      if (std::abs(error) < 1e-8) {
+        break;
+      }
+    }
+
+    DataType ru = std::tan(theta);
+    DataType scale = (rd > 1e-8) ? ru / rd : 1.0;
+    return pt_distorted_normalized * scale;
+#endif
   }
 
   /**

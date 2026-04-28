@@ -12,20 +12,16 @@
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 3.0 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this program. If not, see
  * <https://www.gnu.org/licenses/>.
  */
-
-
-
-
 
 #ifndef OV_CORE_CAM_RADTAN_H
 #define OV_CORE_CAM_RADTAN_H
@@ -113,6 +109,7 @@ public:
    * @return 2d vector of normalized coordinates
    */
   Vec2 undistort(const Vec2 &uv_dist) override {
+#if defined(USE_OPENCV_IMPL)
     // Convert to opencv format
     cv::Mat mat(1, 2, CV_32F);
     mat.at<float>(0, 0) = uv_dist(0);
@@ -122,6 +119,31 @@ public:
     // Undistort it!
     cv::undistortPoints(mat, mat, camera_k_OPENCV_, camera_d_OPENCV_);
     return Vec2(mat.at<float>(0, 0), mat.at<float>(0, 1));
+#else
+    const DataType &fx = camera_values_(0);
+    const DataType &fy = camera_values_(1);
+    const DataType &cx = camera_values_(2);
+    const DataType &cy = camera_values_(3);
+    const DataType &k1 = camera_values_(4);
+    const DataType &k2 = camera_values_(5);
+    const DataType &p1 = camera_values_(6);
+    const DataType &p2 = camera_values_(7);
+    Vec2 pt_normalized;
+    pt_normalized.x() = (uv_dist.x() - cx) / fx;
+    pt_normalized.y() = (uv_dist.y() - cy) / fy;
+
+    Vec2 pt_undistorted = pt_normalized;
+    for (int i = 0; i < 5; i++) {
+      DataType r2 = pt_undistorted.squaredNorm();
+      DataType r4 = r2 * r2;
+      DataType radial_distortion = 1.0 + k1 * r2 + k2 * r4;
+      DataType dx = 2.0 * p1 * pt_undistorted.x() * pt_undistorted.y() + p2 * (r2 + 2.0 * pt_undistorted.x() * pt_undistorted.x());
+      DataType dy = p1 * (r2 + 2.0 * pt_undistorted.y() * pt_undistorted.y()) + 2.0 * p2 * pt_undistorted.x() * pt_undistorted.y();
+      pt_undistorted.x() = (pt_normalized.x() - dx) / radial_distortion;
+      pt_undistorted.y() = (pt_normalized.y() - dy) / radial_distortion;
+    }
+    return pt_undistorted;
+#endif
   }
 
   /**
