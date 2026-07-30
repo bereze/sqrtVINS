@@ -66,6 +66,48 @@ DynamicInitializer::DynamicInitializer(
 bool DynamicInitializer::initialize(std::shared_ptr<State> &state) {
 
   // Get the newest and oldest timestamps we will try to initialize between!
+  double lastest_cam_time = -1;
+  double oldest_cam_time = std::numeric_limits<double>::max();
+  for (auto const &feat : db_->get_internal_data()) {
+    for (auto const &camtimepair : feat.second->timestamps) {
+      for (auto const &time : camtimepair.second) {
+        lastest_cam_time = std::max(lastest_cam_time, time);
+        oldest_cam_time = std::min(oldest_cam_time, time);
+      }
+    }
+  }
+  if (lastest_cam_time - oldest_cam_time < params_.init_window_time) {
+    PRINT_DEBUG(RED "[init]: Waiting for camera measurements to reach window "
+                    "size!\n" RESET);
+    return false;
+  }
+
+  double oldest_win_time =
+      lastest_cam_time - params_.init_window_time - params_.init_window_offset;
+  if (lastest_cam_time < 0 || oldest_win_time < 0) {
+    return false;
+  }
+
+  // Remove all measurements that are older then our initialization window
+  // Then we will try to use all features that are in the feature database!
+  db_->cleanup_measurements(oldest_win_time);
+
+  // Check motion with camera disparity (optical flow)
+  // Note: IMU is not used in here as the platform might have vibration, and we
+  // can not initialize the system either way if there is no disparity
+  bool disparity_detected_moving = false;
+  db_->update_disp_info();
+  bool disparity_check_success =
+      disparity_check(oldest_win_time, lastest_cam_time, db_,
+                      params_.init_max_disparity, disparity_detected_moving);
+
+  if (!disparity_check_success) {
+    PRINT_DEBUG(RED "[init]: static check failed, no enough Camera measurement "
+                    "found!\n" RESET);
+    return false;
+  }
+
+  // Get the newest and oldest timestamps we will try to initialize between!
   auto rT1 = boost::posix_time::microsec_clock::local_time();
 
   // Make sure we have IMU reading before the oldest time
@@ -81,7 +123,7 @@ bool DynamicInitializer::initialize(std::shared_ptr<State> &state) {
   std::unordered_map<size_t, std::shared_ptr<Feature>> features =
       db_->get_internal_data();
   std::set<double> timestamps;
-  for (const auto &feat : db_->get_internal_data()) {
+  for (const auto &feat : features) {
     for (auto cam_t : feat.second->timestamps) {
       for (auto t : cam_t.second) {
         latest_cam_time = std::max(latest_cam_time, t);
@@ -136,8 +178,8 @@ bool DynamicInitializer::initialize(std::shared_ptr<State> &state) {
       select_imu_readings(imu_data, time0_in_imu, time1_in_imu);
   assert(readings.size() > 2);
   for (int k = 0; k < (int)readings.size() - 1; k++) {
-    const auto& imu0 = readings.at(k);
-    const auto& imu1 = readings.at(k + 1);
+    const auto &imu0 = readings.at(k);
+    const auto &imu1 = readings.at(k + 1);
     double dt = imu1.timestamp - imu0.timestamp;
     Vec3 wm = 0.5 * (imu0.wm + imu1.wm) - gyroscope_bias;
     Vec3 am = 0.5 * (imu0.am + imu1.am) - accelerometer_bias;
@@ -208,7 +250,7 @@ bool DynamicInitializer::initialize(std::shared_ptr<State> &state) {
   // ======================================================
   // Find translation directions
   // ======================================================
-  std::map<size_t, std::map<double, Mat3>> map_R_CktoI0;  // [cam_id, kf_time, R_CktoI0]
+  std::map<size_t, std::map<double, Mat3>> map_R_CktoI0; // [cam_id, kf_time, R_CktoI0]
   // Precompute R_CktoI0
   for (int i = 0; i < params_.num_cameras; i++) {
     Vec4 q_ItoC = params_.camera_extrinsics.at(i).block(0, 0, 4, 1);
@@ -257,15 +299,15 @@ bool DynamicInitializer::initialize(std::shared_ptr<State> &state) {
   }
 
   // Sanity check
-  for (const auto &time_camid : bearings_in_I0) {
-    double time = time_camid.first;
-    for (const auto &camid_featid : bearings_in_I0.at(time)) {
-      size_t camid = camid_featid.first;
-      std::cout << std::setprecision(16) << "time: " << time
-                << " camid: " << camid
-                << " size: " << camid_featid.second.size() << std::endl;
-    }
-  }
+  // for (const auto &time_camid : bearings_in_I0) {
+  //   double time = time_camid.first;
+  //   for (const auto &camid_featid : bearings_in_I0.at(time)) {
+  //     size_t camid = camid_featid.first;
+  //     std::cout << std::setprecision(16) << "time: " << time
+  //               << " camid: " << camid
+  //               << " size: " << camid_featid.second.size() << std::endl;
+  //   }
+  // }
   // Find translation directions, which is the eigenvector that corresponds the
   // smallest eigenvalue
   size_t id_curr = 0;
@@ -508,12 +550,14 @@ void DynamicInitializer::keyframing(
   DataType max_disp, min_disp;
   double max_time0 = 0;
   while (remaining_keyframes > 0) {
+    max_disp = -1;
+    max_time0 = -1;
     for (const auto &time0_disps : db_->map_disp) {
       if (keyframe_timestamps.find(time0_disps.first) !=
           keyframe_timestamps.end())
         continue;
-      max_disp = -1;
-      max_time0 = -1;
+      // max_disp = -1;
+      // max_time0 = -1;
       min_disp = std::numeric_limits<DataType>::max();
       for (const auto &time_disp_pair : time0_disps.second) {
         // Skip the ones that are not valid
