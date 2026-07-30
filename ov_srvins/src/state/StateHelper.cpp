@@ -280,7 +280,7 @@ void StateHelper::update_llt(std::shared_ptr<State> state, bool is_iterative) {
 
   // Calculate measurement size
   int state_size = state->U_.cols();
-  int offset = state->x_init_.size() * 3; // offset value to reduce computation. feature dimension
+  int offset = state->x_init_.size() * 3; // offset value to reduce computation. SLAM feature dimension
 
   //==========================================================
   //==========================================================
@@ -313,7 +313,7 @@ void StateHelper::update_llt(std::shared_ptr<State> state, bool is_iterative) {
     // Get H^T*H*dx
     HT_R_inv_res.topRows(state_size - offset) +=
         state->H_update_.get().transpose() *
-        (state->H_update_.get() * state->xk_minus_x0_);
+        (state->H_update_.get() * state->xk_minus_x0_.topRows(state_size - offset));
   }
 
   VecX dx_xkp1_minus_x0;
@@ -395,7 +395,7 @@ void StateHelper::iterative_update_llt(std::shared_ptr<State> state) {
       state->U_.transpose() *
       (state->U_ * (H_big_new.transpose().triangularView<Eigen::Upper>() *
                     S.llt().solve(r_big_new)));
-  // First downdate then udpate
+  // First downdate then update
   for (size_t i = 0; i < state->variables_.size(); i++) {
     state->variables_.at(i)->update(-state->xk_minus_x0_.block(
         state->variables_.at(i)->id(), 0, state->variables_.at(i)->size(), 1));
@@ -803,9 +803,7 @@ void StateHelper::propagate_timeoffset(
 
   const auto pose = state->clones_IMU.rbegin()->second;
   int dt_id = state->calib_dt_CAMtoIMU->id();
-  state->U_.block(dt_id + kStartRow, pose->id(), dt_id + 1, 6) +=
-      state->U_.block(dt_id + kStartRow, dt_id, dt_id + 1, 1) *
-      dnc_dt.transpose();
+  state->U_.middleCols(pose->id(), pose->size()) += state->U_.middleCols(dt_id, 1) * dnc_dt.transpose();
 }
 
 void StateHelper::propagate_zero_motion(std::shared_ptr<State> state,
