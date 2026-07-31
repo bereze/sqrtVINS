@@ -23,21 +23,29 @@
  * <https://www.gnu.org/licenses/>.
  */
 
+#include <memory>
 
-
-
-
+#if ROS_AVAILABLE == 1
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <nav_msgs/Odometry.h>
 #include <ros/ros.h>
+#elif ROS_AVAILABLE == 2
+#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
+#include <geometry_msgs/msg/transform_stamped.hpp>
+#include <nav_msgs/msg/odometry.hpp>
+#include <rclcpp/rclcpp.hpp>
+#endif
 
 #include "utils/Recorder.h"
 #include "utils/print.h"
 
 int main(int argc, char **argv) {
 
+  std::string topic, topic_type, fileoutput;
+#if ROS_AVAILABLE == 1
   // Create ros node
   ros::init(argc, argv, "pose_to_file");
   ros::NodeHandle nh("~");
@@ -48,10 +56,19 @@ int main(int argc, char **argv) {
   ov_core::Printer::setPrintLevel(verbosity);
 
   // Get parameters to subscribe
-  std::string topic, topic_type, fileoutput;
   nh.getParam("topic", topic);
   nh.getParam("topic_type", topic_type);
   nh.getParam("output", fileoutput);
+#elif ROS_AVAILABLE == 2
+  rclcpp::init(argc, argv);
+  rclcpp::NodeOptions options;
+  options.allow_undeclared_parameters(true);
+  options.automatically_declare_parameters_from_overrides(true);
+  auto node = std::make_shared<rclcpp::Node>("pose_to_file", options);
+  node->get_parameter<std::string>("topic", topic);
+  node->get_parameter<std::string>("topic_type", topic_type);
+  node->get_parameter<std::string>("output", fileoutput);
+#endif
 
   // Debug
   PRINT_DEBUG("Done reading config values");
@@ -62,6 +79,7 @@ int main(int argc, char **argv) {
   // Create the recorder object
   ov_eval::Recorder recorder(fileoutput);
 
+#if ROS_AVAILABLE == 1
   // Subscribe to topic
   ros::Subscriber sub;
   if (topic_type == std::string("PoseWithCovarianceStamped")) {
@@ -83,8 +101,37 @@ int main(int argc, char **argv) {
                 "TransformStamped, Odometry");
     std::exit(EXIT_FAILURE);
   }
+#elif ROS_AVAILABLE == 2
+  // Subscribe to topic
+  // NOTE: the subscription shared_ptr must be kept alive for the duration of
+  // the node, otherwise it is destroyed immediately and no messages arrive.
+  rclcpp::SubscriptionBase::SharedPtr sub;
+  if (topic_type == std::string("PoseWithCovarianceStamped")) {
+    sub = node->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
+        topic, 9999, std::bind(&ov_eval::Recorder::callback_posecovariance, &recorder, std::placeholders::_1));
+  } else if (topic_type == std::string("PoseStamped")) {
+    sub = node->create_subscription<geometry_msgs::msg::PoseStamped>(
+        topic, 9999, std::bind(&ov_eval::Recorder::callback_pose, &recorder, std::placeholders::_1));
+  } else if (topic_type == std::string("TransformStamped")) {
+    sub = node->create_subscription<geometry_msgs::msg::TransformStamped>(
+        topic, 9999, std::bind(&ov_eval::Recorder::callback_transform, &recorder, std::placeholders::_1));
+  } else if (topic_type == std::string("Odometry")) {
+    sub = node->create_subscription<nav_msgs::msg::Odometry>(
+        topic, 9999, std::bind(&ov_eval::Recorder::callback_odometry, &recorder, std::placeholders::_1));
+  } else {
+    PRINT_ERROR("The specified topic type is not supported");
+    PRINT_ERROR("topic_type = %s", topic_type.c_str());
+    PRINT_ERROR("please select from: PoseWithCovarianceStamped, PoseStamped, "
+                "TransformStamped, Odometry");
+    std::exit(EXIT_FAILURE);
+  }
+#endif
 
+#if ROS_AVAILABLE == 1
   // Done!
   ros::spin();
+#elif ROS_AVAILABLE == 2
+  rclcpp::spin(node);
+#endif
   return EXIT_SUCCESS;
 }

@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.3)
 # Find ROS build system
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
 find_package(ov_core REQUIRED)
 
 # Describe ROS project
@@ -116,6 +118,10 @@ ament_target_dependencies(plot_trajectories rclcpp ov_core)
 target_link_libraries(plot_trajectories ov_eval_lib ${thirdparty_libraries})
 install(TARGETS plot_trajectories DESTINATION lib/${PROJECT_NAME})
 
+add_executable(pose_to_file src/pose_to_file.cpp)
+ament_target_dependencies(pose_to_file rclcpp geometry_msgs nav_msgs ov_core)
+target_link_libraries(pose_to_file ov_eval_lib ${thirdparty_libraries})
+install(TARGETS pose_to_file DESTINATION lib/${PROJECT_NAME})
 
 ##################################################
 # Python scripts!

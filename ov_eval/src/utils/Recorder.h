@@ -12,17 +12,16 @@
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 3.0 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this program. If not, see
  * <https://www.gnu.org/licenses/>.
  */
-
 
 
 
@@ -37,11 +36,19 @@
 #include <Eigen/Eigen>
 #include <boost/filesystem.hpp>
 
+#if ROS_AVAILABLE == 1
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <nav_msgs/Odometry.h>
-#include <ros/ros.h>
+#elif ROS_AVAILABLE == 2
+#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
+#include <geometry_msgs/msg/transform_stamped.hpp>
+#include <nav_msgs/msg/odometry.hpp>
+#endif
+
+#include "utils/print.h"
 
 namespace ov_eval {
 
@@ -67,19 +74,19 @@ public:
     // Create folder path to this location if not exists
     boost::filesystem::path dir(filename.c_str());
     if (boost::filesystem::create_directories(dir.parent_path())) {
-      ROS_INFO("Created folder path to output file.");
-      ROS_INFO("Path: %s", dir.parent_path().c_str());
+      PRINT_INFO("Created folder path to output file.\n");
+      PRINT_INFO("Path: %s\n", dir.parent_path().c_str());
     }
     // If it exists, then delete it
     if (boost::filesystem::exists(filename)) {
-      ROS_WARN("Output file exists, deleting old file....");
+      PRINT_WARNING("Output file exists, deleting old file....\n");
       boost::filesystem::remove(filename);
     }
     // Open this file we want to write to
     outfile.open(filename.c_str());
     if (outfile.fail()) {
-      ROS_ERROR("Unable to open output file!!");
-      ROS_ERROR("Path: %s", filename.c_str());
+      PRINT_ERROR("Unable to open output file!!\n");
+      PRINT_ERROR("Path: %s\n", filename.c_str());
       std::exit(EXIT_FAILURE);
     }
     outfile << "# timestamp(s) tx ty tz qx qy qz qw Pr11 Pr12 Pr13 Pr22 Pr23 "
@@ -95,7 +102,7 @@ public:
   }
 
   /**
-   * @brief Callback for nav_msgs::Odometry message types.
+   * @brief Callback for nav_msgs Odometry message types.
    *
    * Note that covariance is in the order (x, y, z, rotation about X axis,
    * rotation about Y axis, rotation about Z axis).
@@ -103,8 +110,13 @@ public:
    *
    * @param msg New message
    */
-  void callback_odometry(const nav_msgs::OdometryPtr &msg) {
+#if ROS_AVAILABLE == 1
+  void callback_odometry(const nav_msgs::OdometryConstPtr &msg) {
     timestamp = msg->header.stamp.toSec();
+#elif ROS_AVAILABLE == 2
+  void callback_odometry(const nav_msgs::msg::Odometry::SharedPtr msg) {
+    timestamp = msg->header.stamp.sec + msg->header.stamp.nanosec * 1e-9;
+#endif
     q_ItoG << msg->pose.pose.orientation.x, msg->pose.pose.orientation.y,
         msg->pose.pose.orientation.z, msg->pose.pose.orientation.w;
     p_IinG << msg->pose.pose.position.x, msg->pose.pose.position.y,
@@ -124,11 +136,16 @@ public:
   }
 
   /**
-   * @brief Callback for geometry_msgs::PoseStamped message types
+   * @brief Callback for geometry_msgs PoseStamped message types
    * @param msg New message
    */
-  void callback_pose(const geometry_msgs::PoseStampedPtr &msg) {
+#if ROS_AVAILABLE == 1
+  void callback_pose(const geometry_msgs::PoseStampedConstPtr &msg) {
     timestamp = msg->header.stamp.toSec();
+#elif ROS_AVAILABLE == 2
+  void callback_pose(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
+    timestamp = msg->header.stamp.sec + msg->header.stamp.nanosec * 1e-9;
+#endif
     q_ItoG << msg->pose.orientation.x, msg->pose.orientation.y,
         msg->pose.orientation.z, msg->pose.orientation.w;
     p_IinG << msg->pose.position.x, msg->pose.position.y, msg->pose.position.z;
@@ -136,7 +153,7 @@ public:
   }
 
   /**
-   * @brief Callback for geometry_msgs::PoseWithCovarianceStamped message types.
+   * @brief Callback for geometry_msgs PoseWithCovarianceStamped message types.
    *
    * Note that covariance is in the order (x, y, z, rotation about X axis,
    * rotation about Y axis, rotation about Z axis).
@@ -144,9 +161,15 @@ public:
    *
    * @param msg New message
    */
+#if ROS_AVAILABLE == 1
   void callback_posecovariance(
-      const geometry_msgs::PoseWithCovarianceStampedPtr &msg) {
+      const geometry_msgs::PoseWithCovarianceStampedConstPtr &msg) {
     timestamp = msg->header.stamp.toSec();
+#elif ROS_AVAILABLE == 2
+  void callback_posecovariance(
+      const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg) {
+    timestamp = msg->header.stamp.sec + msg->header.stamp.nanosec * 1e-9;
+#endif
     q_ItoG << msg->pose.pose.orientation.x, msg->pose.pose.orientation.y,
         msg->pose.pose.orientation.z, msg->pose.pose.orientation.w;
     p_IinG << msg->pose.pose.position.x, msg->pose.pose.position.y,
@@ -166,11 +189,17 @@ public:
   }
 
   /**
-   * @brief Callback for geometry_msgs::TransformStamped message types
+   * @brief Callback for geometry_msgs TransformStamped message types
    * @param msg New message
    */
-  void callback_transform(const geometry_msgs::TransformStampedPtr &msg) {
+#if ROS_AVAILABLE == 1
+  void callback_transform(const geometry_msgs::TransformStampedConstPtr &msg) {
     timestamp = msg->header.stamp.toSec();
+#elif ROS_AVAILABLE == 2
+  void
+  callback_transform(const geometry_msgs::msg::TransformStamped::SharedPtr msg) {
+    timestamp = msg->header.stamp.sec + msg->header.stamp.nanosec * 1e-9;
+#endif
     q_ItoG << msg->transform.rotation.x, msg->transform.rotation.y,
         msg->transform.rotation.z, msg->transform.rotation.w;
     p_IinG << msg->transform.translation.x, msg->transform.translation.y,
@@ -198,7 +227,7 @@ protected:
             << q_ItoG(3);
 
     // output the covariance only if we have it
-    if (has_covariance) {
+    if (0) {
       outfile.precision(10);
       outfile << " " << cov_rot(0, 0) << " " << cov_rot(0, 1) << " "
               << cov_rot(0, 2) << " " << cov_rot(1, 1) << " " << cov_rot(1, 2)

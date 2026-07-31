@@ -39,7 +39,7 @@ launch_args = [
     ),
     DeclareLaunchArgument(
         name="max_cameras",
-        default_value="1",
+        default_value="2",
         description="how many cameras we have 1 = mono, 2 = stereo, >2 = binocular (all mono tracking)",
     ),
     DeclareLaunchArgument(
@@ -47,6 +47,16 @@ launch_args = [
         default_value="false",
         description="record the total state with calibration and features to a txt file",
     ),
+    DeclareLaunchArgument(
+        name="save_traj",
+        default_value="false",
+        description="save the vio trajectory"
+    ),
+    DeclareLaunchArgument(
+        name="path_est",
+        default_value="/tmp/traj_est.txt",
+        description="the vio trajectory filepath to save"
+    )
 ]
 
 
@@ -109,8 +119,19 @@ def launch_setup(context):
             "warn",
         ],
     )
+    
+    node3 = Node(
+        package="ov_eval",
+        executable="pose_to_file",
+        condition=IfCondition(LaunchConfiguration("save_traj")),
+        parameters=[
+            {"topic": "/" + str(LaunchConfiguration("namespace").perform(context)) + "/poseimu"},
+            {"topic_type": "PoseWithCovarianceStamped"},
+            {"output": LaunchConfiguration("path_est")}
+        ]
+    )
 
-    return [node1, node2]
+    return [node1, node2, node3]
 
 
 def generate_launch_description():
