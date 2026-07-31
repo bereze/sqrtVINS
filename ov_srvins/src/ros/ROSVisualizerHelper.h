@@ -119,7 +119,7 @@ public:
    * @param seconds Time in seconds
    * @return Return ROS2 header timestamp
    */
-  static rclcpp::Time get_time_from_seconds(DataType seconds) {
+  static rclcpp::Time get_time_from_seconds(double seconds) {
 
     // ROS2 time class has no DataType constructor
     // Extract compatible time from timestamp using ros1 implementation for now
