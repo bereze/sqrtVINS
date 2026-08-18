@@ -133,15 +133,16 @@ bool UpdaterZeroVelocity::try_update(std::shared_ptr<State> state,
 
   // Order of our Jacobian
   std::vector<std::shared_ptr<Type>> Hx_order;
-  Hx_order.push_back(state->imu->q());
-  Hx_order.push_back(state->imu->bg());
-  Hx_order.push_back(state->imu->ba());
-  if (integrated_accel_constraint) {
-    Hx_order.push_back(state->imu->v());
-  }
+  // Hx_order.push_back(state->imu->q());
+  // Hx_order.push_back(state->imu->bg());
+  // Hx_order.push_back(state->imu->ba());
+  // if (integrated_accel_constraint) {
+  //   Hx_order.push_back(state->imu->v());
+  // }
+  Hx_order.push_back(state->imu);
 
   // Large final matrices used for update (we will compress these)
-  int h_size = (integrated_accel_constraint) ? 12 : 9;
+  int h_size = state->imu->size();// (integrated_accel_constraint) ? 12 : 9;
   int m_size = 6 * ((int)imu_recent.size() - 1);
   MatX H = MatX::Zero(m_size, h_size);
   VecX res = VecX::Zero(m_size);
@@ -186,10 +187,10 @@ bool UpdaterZeroVelocity::try_update(std::shared_ptr<State> state,
     // Measurement Jacobian
     Mat3 R_GtoI_jacob =
         (state->options.do_fej) ? state->imu->Rot_fej() : state->imu->Rot();
-    H.block(6 * i + 0, 3, 3, 3) = -w_omega * Mat3::Identity();
+    H.block(6 * i + 0, state->imu->bg()->id(), 3, 3) = -w_omega * Mat3::Identity();
     if (!integrated_accel_constraint) {
-      H.block(6 * i + 3, 0, 3, 3) = -w_accel * skew_x(R_GtoI_jacob * gravity_);
-      H.block(6 * i + 3, 6, 3, 3) = -w_accel * Mat3::Identity();
+      H.block(6 * i + 3, state->imu->q()->id(), 3, 3) = -w_accel * skew_x(R_GtoI_jacob * gravity_);
+      H.block(6 * i + 3, state->imu->ba()->id(), 3, 3) = -w_accel * Mat3::Identity();
     } else {
       assert(false);
       H.block(6 * i + 3, 0, 3, 3) =
@@ -219,7 +220,9 @@ bool UpdaterZeroVelocity::try_update(std::shared_ptr<State> state,
   MatX U_marg = StateHelper::get_marginal_U(state, Hx_order);
   if (model_time_varying_bias) {
     U_marg.conservativeResizeLike(MatX::Zero(U_marg.rows() + 6, U_marg.cols()));
-    U_marg.bottomRows(6).middleCols(3, 6) = Q_bias_sqrt;
+    // U_marg.bottomRows(6).middleCols(3, 6) = Q_bias_sqrt;
+    U_marg.bottomRows(6).middleCols(state->imu->bg()->id(), 3) = Q_bias_sqrt.middleCols(0, 3);
+    U_marg.bottomRows(6).middleCols(state->imu->ba()->id(), 3) = Q_bias_sqrt.middleCols(3, 3);
   }
   efficient_QR(U_marg);
   U_marg.conservativeResizeLike(MatX::Zero(U_marg.cols(), U_marg.cols()));
