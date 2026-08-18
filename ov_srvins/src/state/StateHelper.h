@@ -199,8 +199,8 @@ public:
   static void initialize_invertible(
       std::shared_ptr<State> state, std::shared_ptr<ov_type::Type> new_variable,
       const std::vector<std::shared_ptr<ov_type::Type>> &H_order,
-      Eigen::Ref<const MatX> H_R, Eigen::Ref<const MatX> H_L,
-      Eigen::Ref<const VecX> res, DataType sigma_pix_inv);
+      const Eigen::Ref<const MatX>& H_R, const Eigen::Ref<const MatX>& H_L,
+      const Eigen::Ref<const VecX>& res, DataType sigma_pix_inv);
 
   /**
    * @brief Perform the SREKF initialization step, in here, we will initialize
