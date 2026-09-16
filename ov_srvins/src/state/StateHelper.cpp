@@ -525,8 +525,8 @@ bool StateHelper::initialize(std::shared_ptr<State> state,
 void StateHelper::initialize_invertible(
     std::shared_ptr<State> state, std::shared_ptr<Type> new_variable,
     const std::vector<std::shared_ptr<Type>> &H_order,
-    Eigen::Ref<const MatX> H_R, Eigen::Ref<const MatX> H_L,
-    Eigen::Ref<const VecX> res, DataType sigma_pix_inv) {
+    const Eigen::Ref<const MatX>& H_R, const Eigen::Ref<const MatX>& H_L,
+    const Eigen::Ref<const VecX>& res, DataType sigma_pix_inv) {
 
   // Check that this new variable is not already initialized
   if (std::find(state->variables_.begin(), state->variables_.end(),
